@@ -30,7 +30,9 @@ class AFDApp:
         self.root.title("Creación de Autómata Finito Determinista (AFD)")
         self.afd = None
         self.estado_circulos = {}
+        self.estado_doble_circulos = {}
         self.estado_lineas = {}
+        self.flecha_inicial = None
         self.canvas = tk.Canvas(self.root, width=600, height=400, bg="white")
         self.canvas.grid(row=0, column=2, rowspan=8)
 
@@ -108,10 +110,21 @@ class AFDApp:
             circulo = self.canvas.create_oval(x - radio, y - radio, x + radio, y + radio, fill="lightblue", tags="estado")
             texto = self.canvas.create_text(x, y, text=estado, tags="estado_texto")
             self.estado_circulos[estado] = (circulo, texto)
+
+            # Dibuja un doble círculo para los estados finales
+            if estado in self.afd.estados_finales:
+                doble_circulo = self.canvas.create_oval(x - radio + 5, y - radio + 5, x + radio - 5, y + radio - 5, outline="black", width=2, tags="estado_final")
+                self.estado_doble_circulos[estado] = doble_circulo
+
             self.canvas.tag_bind(circulo, "<ButtonPress-1>", self.on_estado_press)
             self.canvas.tag_bind(circulo, "<B1-Motion>", self.on_estado_drag)
             self.canvas.tag_bind(texto, "<ButtonPress-1>", self.on_estado_press)
             self.canvas.tag_bind(texto, "<B1-Motion>", self.on_estado_drag)
+
+        # Dibuja la flecha inicial
+        if self.afd.estado_inicial in self.estado_circulos:
+            x_inicial, y_inicial = self._obtener_coordenadas_circulo(self.afd.estado_inicial)
+            self.flecha_inicial = self.canvas.create_line(x_inicial - radio - 20, y_inicial, x_inicial - radio, y_inicial, arrow=tk.LAST, tags="inicial")
 
         for (origen, simbolo), destino in self.afd.transiciones.items():
             x1, y1 = self._obtener_coordenadas_circulo(origen)
@@ -139,6 +152,16 @@ class AFDApp:
                 self.canvas.move(texto, dx, dy)
             elif self.selected_item == texto:
                 self.canvas.move(circulo, dx, dy)
+
+            # Mueve el doble círculo asociado
+            if estado in self.estado_doble_circulos:
+                doble_circulo = self.estado_doble_circulos[estado]
+                self.canvas.move(doble_circulo, dx, dy)
+
+            # Mueve la flecha inicial si el estado inicial se está moviendo
+            if self.selected_item == circulo and estado == self.afd.estado_inicial:
+                x_inicial, y_inicial = self._obtener_coordenadas_circulo(self.afd.estado_inicial)
+                self.canvas.coords(self.flecha_inicial, x_inicial - 50, y_inicial, x_inicial - 20, y_inicial)
 
         self.actualizar_transiciones()
 
@@ -173,13 +196,13 @@ class AFDApp:
         if self.paso_actual > 0:
             estado_anterior = self.recorrido[self.paso_actual - 1]
             circulo_anterior, _ = self.estado_circulos[estado_anterior]
-            self.canvas.itemconfig(circulo_anterior, fill="lightblue")
+            self.canvas.itemconfig(circulo_anterior, fill="grey")
 
         if self.paso_actual < len(self.recorrido):
             estado_actual = self.recorrido[self.paso_actual]
             circulo_actual, _ = self.estado_circulos[estado_actual]
             if self.paso_actual == len(self.recorrido) - 1 and estado_actual in self.afd.estados_finales:
-                self.canvas.itemconfig(circulo_actual, fill="green")  # Cambia a verde si es un estado final
+                self.canvas.itemconfig(circulo_actual, fill="#39FF14")  # Cambia a verde si es un estado final
             else:
                 self.canvas.itemconfig(circulo_actual, fill="yellow")  # Cambia a amarillo si no es final
             self.paso_actual += 1
