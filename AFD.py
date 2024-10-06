@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+import math
 
 class AFD:
     def __init__(self, estados, alfabeto, transiciones, estado_inicial, estados_finales):
@@ -104,6 +105,9 @@ class AFDApp:
         distancia = 150
         margen = 50
 
+        # Resetea las líneas de transiciones para que se puedan actualizar correctamente
+        self.estado_lineas = {}
+
         for i, estado in enumerate(self.afd.estados):
             x = margen + (i % 3) * distancia
             y = margen + (i // 3) * distancia
@@ -111,11 +115,12 @@ class AFDApp:
             texto = self.canvas.create_text(x, y, text=estado, tags="estado_texto")
             self.estado_circulos[estado] = (circulo, texto)
 
-            # Dibuja un doble círculo para los estados finales
+            # Dibuja doble círculo para los estados finales
             if estado in self.afd.estados_finales:
                 doble_circulo = self.canvas.create_oval(x - radio + 5, y - radio + 5, x + radio - 5, y + radio - 5, outline="black", width=2, tags="estado_final")
                 self.estado_doble_circulos[estado] = doble_circulo
 
+            # Vincular eventos para manipulación con el mouse
             self.canvas.tag_bind(circulo, "<ButtonPress-1>", self.on_estado_press)
             self.canvas.tag_bind(circulo, "<B1-Motion>", self.on_estado_drag)
             self.canvas.tag_bind(texto, "<ButtonPress-1>", self.on_estado_press)
@@ -126,13 +131,38 @@ class AFDApp:
             x_inicial, y_inicial = self._obtener_coordenadas_circulo(self.afd.estado_inicial)
             self.flecha_inicial = self.canvas.create_line(x_inicial - radio - 20, y_inicial, x_inicial - radio, y_inicial, arrow=tk.LAST, tags="inicial")
 
+        # Dibujar las transiciones
+        transiciones_vistas = {}
         for (origen, simbolo), destino in self.afd.transiciones.items():
-            x1, y1 = self._obtener_coordenadas_circulo(origen)
-            x2, y2 = self._obtener_coordenadas_circulo(destino)
-            linea = self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, tags="transicion")
-            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
-            texto = self.canvas.create_text(mid_x, mid_y - 10, text=simbolo, tags="transicion_texto")
-            self.estado_lineas[(origen, destino)] = (linea, texto)
+            if origen == destino:
+                self._dibujar_bucle(origen, simbolo)
+            else:
+                if (origen, destino) not in transiciones_vistas:
+                    transiciones_vistas[(origen, destino)] = []
+                transiciones_vistas[(origen, destino)].append(simbolo)
+
+        for (origen, destino), simbolos in transiciones_vistas.items():
+            if origen != destino:
+                self._dibujar_transicion_multiple(origen, destino, simbolos)
+
+    def _dibujar_bucle(self, estado, simbolo):
+        """Dibuja un bucle (transición a sí mismo) para un estado"""
+        x, y = self._obtener_coordenadas_circulo(estado)
+        radio = 30
+        bucle = self.canvas.create_arc(x - radio, y - 2 * radio, x + radio, y, start=0, extent=270, style=tk.ARC, tags="transicion")
+        texto = self.canvas.create_text(x, y - 2 * radio, text=simbolo, tags="transicion_texto")
+        self.estado_lineas[(estado, estado)] = (bucle, texto)
+
+    def _dibujar_transicion_multiple(self, origen, destino, simbolos):
+        """Dibuja una transición entre dos estados con múltiples símbolos"""
+        x1, y1 = self._obtener_coordenadas_circulo(origen)
+        x2, y2 = self._obtener_coordenadas_circulo(destino)
+        linea = self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, tags="transicion")
+        
+        # Colocar el texto de los símbolos en el medio de la línea
+        mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+        texto = self.canvas.create_text(mid_x, mid_y - 10, text=",".join(simbolos), tags="transicion_texto")
+        self.estado_lineas[(origen, destino)] = (linea, texto)
 
     def on_estado_press(self, event):
         widget = event.widget
@@ -145,6 +175,7 @@ class AFDApp:
         self.canvas.move(self.selected_item, dx, dy)
         self.selected_item_coords = (event.x, event.y)
 
+        # Buscar el estado asociado con el item seleccionado
         estado = self._get_estado_from_item(self.selected_item)
         if estado:
             circulo, texto = self.estado_circulos[estado]
@@ -158,26 +189,41 @@ class AFDApp:
                 doble_circulo = self.estado_doble_circulos[estado]
                 self.canvas.move(doble_circulo, dx, dy)
 
-            # Mueve la flecha inicial si el estado inicial se está moviendo
-            if self.selected_item == circulo and estado == self.afd.estado_inicial:
+            # Mueve la flecha inicial si es el estado inicial
+            if estado == self.afd.estado_inicial:
                 x_inicial, y_inicial = self._obtener_coordenadas_circulo(self.afd.estado_inicial)
                 self.canvas.coords(self.flecha_inicial, x_inicial - 50, y_inicial, x_inicial - 20, y_inicial)
 
+        # Actualiza las transiciones conectadas a este estado
         self.actualizar_transiciones()
 
     def actualizar_transiciones(self):
+        """Actualiza la posición de las transiciones al mover los estados"""
         for (origen, destino), (linea, texto) in self.estado_lineas.items():
-            x1, y1 = self._obtener_coordenadas_circulo(origen)
-            x2, y2 = self._obtener_coordenadas_circulo(destino)
-            self.canvas.coords(linea, x1, y1, x2, y2)
-            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
-            self.canvas.coords(texto, mid_x, mid_y - 10)
+            if origen == destino:
+                self._actualizar_bucle(origen)
+            else:
+                x1, y1 = self._obtener_coordenadas_circulo(origen)
+                x2, y2 = self._obtener_coordenadas_circulo(destino)
+                self.canvas.coords(linea, x1, y1, x2, y2)
+                mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+                self.canvas.coords(texto, mid_x, mid_y - 10)
+
+    def _actualizar_bucle(self, estado):
+        """Actualiza la posición del bucle de un estado (transición a sí mismo)"""
+        x, y = self._obtener_coordenadas_circulo(estado)
+        radio = 30
+        bucle, texto = self.estado_lineas[(estado, estado)]
+        self.canvas.coords(bucle, x - radio, y - 2 * radio, x + radio, y)
+        self.canvas.coords(texto, x, y - 2 * radio)
 
     def _obtener_coordenadas_circulo(self, estado):
+        """Obtiene las coordenadas del centro del círculo que representa un estado"""
         x0, y0, x1, y1 = self.canvas.coords(self.estado_circulos[estado][0])
         return (x0 + x1) / 2, (y0 + y1) / 2
 
     def _get_estado_from_item(self, item):
+        """Encuentra el estado al que pertenece el item del canvas seleccionado"""
         for estado, (circulo, texto) in self.estado_circulos.items():
             if item == circulo or item == texto:
                 return estado
