@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFD con Flask y Cytoscape.js</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.1/cytoscape.min.js"></script>
+</head>
+<body>
+    <h1>Autómata Finito Determinista (AFD)</h1>
+
+    <div>
+        <label>Estados (separados por comas):</label>
+        <input type="text" id="estados"><br>
+
+        <label>Alfabeto (separado por comas):</label>
+        <input type="text" id="alfabeto"><br>
+
+        <label>Transiciones (formato: estado,simbolo->estado_destino):</label>
+        <textarea id="transiciones"></textarea><br>
+
+        <label>Estado inicial:</label>
+        <input type="text" id="estado_inicial"><br>
+
+        <label>Estados finales (separados por comas):</label>
+        <input type="text" id="estados_finales"><br>
+
+        <button onclick="crearAFD()">Crear AFD</button>
+    </div>
+
+    <h2>Evaluar Cadena</h2>
+    <label>Cadena para evaluar:</label>
+    <input type="text" id="cadena"><br>
+    <button onclick="evaluarCadena()">Evaluar</button>
+
+    <h2>Visualización</h2>
+    <div id="cy" style="width: 600px; height: 400px; border: 1px solid black;"></div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
