@@ -61,6 +61,20 @@ def evaluate():
         return jsonify({"resultado": resultado, "recorrido": recorrido})
     else:
         return jsonify({"resultado": False, "message": "Primero crea el AFD"})
+    
+@app.route('/get_afd', methods=['GET'])
+def get_afd():
+    if afd:
+        afd_info = {
+            "Q": afd.estados,
+            "Σ": afd.alfabeto,
+            "δ": afd.transiciones,
+            "q0": afd.estado_inicial,
+            "F": afd.estados_finales
+        }
+        return jsonify(afd_info), 200
+    else:
+        return jsonify({"message": "No hay AFD creado"}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -11,8 +11,10 @@ function inicializarCytoscape() {
                     'background-color': 'lightblue',
                     'text-valign': 'center',
                     'text-halign': 'center',
-                    'border-width': 2,
+                    'border-width': 1,
                     'border-color': 'black',
+                    'width': 45,
+                    'height': 45,
                 }
             },
             {
@@ -29,8 +31,20 @@ function inicializarCytoscape() {
             {
                 selector: '.estado-final',
                 style: {
-                    'border-color': 'green',
-                    'border-width': 4,
+                    'border-color': 'black',
+                    'border-width': 1,
+                    'width': 35,  // Tamaño del nodo interno (más pequeño)
+                    'height': 35
+                }
+            },
+            {
+                selector: '.estado-final-externo',
+                style: {
+                    'border-color': 'black',
+                    'border-width': 1,
+                    'width': 45,  // Tamaño del nodo externo (más grande)
+                    'height': 45,
+                    'background-color': 'white'  // Nodo externo debe ser transparente
                 }
             },
             {
@@ -38,7 +52,7 @@ function inicializarCytoscape() {
                 style: {
                     'background-color': 'orange',
                     'border-color': 'red',
-                    'border-width': 4,
+                    'border-width': 1,
                 }
             },
             {
@@ -49,7 +63,7 @@ function inicializarCytoscape() {
                     'target-arrow-color': 'black',
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'straight',
-                    'width': 2
+                    'width': 1
                 }
             },
             {
@@ -74,18 +88,68 @@ function dibujarAFD(afdData) {
 
     // Agregar nodos
     estados.forEach(estado => {
-        cy.add({
-            group: 'nodes',
-            data: { id: estado, label: estado },
-            classes: afdData.estados_finales.includes(estado) ? 'estado-final' : ''
-        });
+        if (afdData.estados_finales.includes(estado)) {
+            // Posición inicial aleatoria
+            const posX = Math.random() * 400;
+            const posY = Math.random() * 400;
+
+            // Añadir nodo más grande (estado-final-externo), que recibirá las transiciones
+            cy.add({
+                group: 'nodes',
+                data: { id: estado + '_externo', label: '' },  // Nodo externo sin etiqueta
+                classes: 'estado-final-externo',
+                position: { x: posX, y: posY }  // Posición inicial
+            });
+
+            // Añadir nodo más pequeño con la etiqueta
+            cy.add({
+                group: 'nodes',
+                data: { id: estado, label: estado },  // Nodo interno con la etiqueta
+                classes: 'estado-final',
+                position: { x: posX, y: posY }  // Posición inicial
+            });
+
+            // Vincular movimientos entre el nodo pequeño y el grande
+            const estadoInterno = cy.getElementById(estado);
+            const estadoExterno = cy.getElementById(estado + '_externo');
+
+            // Evitar la actualización circular
+            let isUpdating = false;
+
+            // Sincronizar movimiento del nodo pequeño con el grande
+            estadoInterno.on('position', function(evt) {
+                if (!isUpdating) {
+                    isUpdating = true;
+                    const pos = estadoInterno.position();
+                    estadoExterno.position(pos);
+                    isUpdating = false;
+                }
+            });
+
+            // Sincronizar movimiento del nodo grande con el pequeño
+            estadoExterno.on('position', function(evt) {
+                if (!isUpdating) {
+                    isUpdating = true;
+                    const pos = estadoExterno.position();
+                    estadoInterno.position(pos);
+                    isUpdating = false;
+                }
+            });
+
+        } else {
+            // Nodo normal
+            cy.add({
+                group: 'nodes',
+                data: { id: estado, label: estado }
+            });
+        }
     });
 
     // Nodo ficticio para la flecha que apunta al estado inicial
     cy.add({
         group: 'nodes',
-        data: { id: 'ficticio', label: '' },  // Nodo invisible
-        position: { x: 50, y: 50 }            // Posición arbitraria fuera del grafo principal
+        data: { id: 'ficticio', label: '' },
+        position: { x: 50, y: 50 }  // Posición fija para el nodo ficticio
     });
 
     // Flecha que conecta el nodo ficticio con el estado inicial
@@ -93,21 +157,27 @@ function dibujarAFD(afdData) {
         group: 'edges',
         data: {
             source: 'ficticio',
-            target: estadoInicial,
-            label: '',  // No necesitamos un label para esta flecha
+            target: estadoInicial + (afdData.estados_finales.includes(estadoInicial) ? '_externo' : ''),  // Apunta al nodo externo si es estado final
+            label: '',
         },
-        classes: 'flecha-inicial'  // Clase personalizada para la flecha
+        classes: 'flecha-inicial'
     });
 
     // Agregar transiciones (edges)
     Object.keys(transiciones).forEach(trans => {
         const [origen, simbolo] = trans.split(',');
         const destino = transiciones[trans];
+
+        // Comprobamos si el origen y el destino son estados finales
+        const origenExterno = afdData.estados_finales.includes(origen.trim()) ? origen.trim() + '_externo' : origen.trim();
+        const destinoExterno = afdData.estados_finales.includes(destino.trim()) ? destino.trim() + '_externo' : destino.trim();
+
+        // Crear la transición
         cy.add({
             group: 'edges',
             data: {
-                source: origen.trim(),
-                target: destino.trim(),
+                source: origenExterno,  // Transición desde el nodo externo (si es final) o el nodo normal
+                target: destinoExterno,  // Transición hacia el nodo externo (si es final) o el nodo normal
                 label: simbolo.trim(),
             }
         });
@@ -116,7 +186,6 @@ function dibujarAFD(afdData) {
     // Aplicar el layout
     cy.layout({ name: 'grid' }).run();
 }
-
 
 async function crearAFD() {
     const estados = document.getElementById('estados').value.split(',');
@@ -152,6 +221,9 @@ async function crearAFD() {
     const data = await response.json();
     alert(data.message);
     dibujarAFD(afdData);
+    
+    // Mostrar la gramática después de crear el AFD
+    mostrarAFD();
 }
 
 async function evaluarCadena() {
@@ -193,6 +265,28 @@ function resaltarRecorrido(recorrido) {
         }, index * 1000);  // Esperar un segundo entre cada paso
     });
 }
+
+async function mostrarAFD() {
+    const response = await fetch('/get_afd');
+
+    if (response.ok) {
+        const afdData = await response.json();
+        const gramaticaHtml = `
+            <h4>Gramática del AFD</h4>
+            <p><strong>Conjunto de Estados (Q):</strong> ${afdData.Q.join(', ')}</p>
+            <p><strong>Alfabeto (Σ):</strong> ${afdData.Σ.join(', ')}</p>
+            <p><strong>Función de Transición (δ):</strong></p>
+            <pre>${JSON.stringify(afdData.δ, null, 2)}</pre>
+            <p><strong>Estado Inicial (q0):</strong> ${afdData.q0}</p>
+            <p><strong>Conjunto de Estados Finales (F):</strong> ${afdData.F.join(', ')}</p>
+        `;
+        document.getElementById('afd_gramatica').innerHTML = gramaticaHtml;
+    } else {
+        const errorData = await response.json();
+        alert(errorData.message);
+    }
+}
+
 
 // Inicializar el gráfico al cargar la página
 document.addEventListener('DOMContentLoaded', inicializarCytoscape);

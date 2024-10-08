@@ -2,12 +2,11 @@ body {
     font-family: Arial, sans-serif;
 }
 
-canvas {
+#cy {
+    background-color: white;
+    border-radius: 4px;
+    margin-top: 20px;
     border: 1px solid black;
-}
-
-input, textarea {
-    margin: 5px 0;
 }
 
 .estado-actual {
@@ -16,6 +15,6 @@ input, textarea {
     border-width: 4px !important;
 }
 
-#cy {
-    background-color: white;
+textarea, input {
+    margin: 10px 0;
 }
