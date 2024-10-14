@@ -1,4 +1,8 @@
 let cy;
+let estados = [];
+let transiciones = {};
+let estado_inicial = '';
+let estados_finales = [];
 
 function inicializarCytoscape() {
     cy = cytoscape({
@@ -25,7 +29,11 @@ function inicializarCytoscape() {
                     'line-color': '#ccc',
                     'target-arrow-color': '#ccc',
                     'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier'
+                    'curve-style': 'bezier',
+                    'text-margin-y': -10,
+                    'control-point-step-size': 35,
+                    'loop-direction': '0deg',
+                    'loop-sweep': '40deg'
                 }
             },
             {
@@ -33,7 +41,7 @@ function inicializarCytoscape() {
                 style: {
                     'border-color': 'black',
                     'border-width': 1,
-                    'width': 35,  // Tamaño del nodo interno (más pequeño)
+                    'width': 35,
                     'height': 35
                 }
             },
@@ -42,9 +50,9 @@ function inicializarCytoscape() {
                 style: {
                     'border-color': 'black',
                     'border-width': 1,
-                    'width': 45,  // Tamaño del nodo externo (más grande)
-                    'height': 45,
-                    'background-color': 'white'  // Nodo externo debe ser transparente
+                    'width': 44,
+                    'height': 44,
+                    'background-color': 'lightblue'
                 }
             },
             {
@@ -67,14 +75,78 @@ function inicializarCytoscape() {
                 }
             },
             {
-                selector: '#ficticio',  // Añadir estilo específico para el nodo ficticio
+                selector: '#ficticio',
                 style: {
-                    'background-color': 'white', // Color de fondo blanco
-                    'border-color': 'white',      // Sin borde visible
-                    'border-width': 0             // Sin borde
+                    'background-color': 'white',
+                    'border-color': 'white',
+                    'border-width': 0,
+                    'width': 3,
+                    'height': 3
                 }
             }
-        ]
+        ],
+        zoomingEnabled: true,
+        userZoomingEnabled: false
+    });
+}
+
+document.getElementById('agregarEstadoBtn').addEventListener('click', function() {
+    const nuevoEstado = document.getElementById('estado').value.trim();
+    if (nuevoEstado && !estados.includes(nuevoEstado)) {
+        estados.push(nuevoEstado);
+        document.getElementById('estado').value = ''; // Limpiar campo de texto
+        dibujarAFD({ estados, transiciones, estado_inicial, estados_finales }); // Actualizar el canvas
+    }
+});
+
+document.getElementById('agregarTransicionBtn').addEventListener('click', function() {
+    const estadoOrigen = document.getElementById('transicionOrigen').value.trim();
+    const simbolo = document.getElementById('transicionSimbolo').value.trim();
+    const estadoDestino = document.getElementById('transicionDestino').value.trim();
+
+    if (estadoOrigen && simbolo && estadoDestino) {
+        transiciones[`${estadoOrigen},${simbolo}`] = estadoDestino;
+        // Limpiar campos de texto
+        document.getElementById('transicionOrigen').value = '';
+        document.getElementById('transicionSimbolo').value = '';
+        document.getElementById('transicionDestino').value = '';
+
+        dibujarAFD({ estados, transiciones, estado_inicial, estados_finales }); // Actualizar el canvas
+    }
+});
+
+document.getElementById('crearAfdBtn').addEventListener('click', function() {
+    estado_inicial = document.getElementById('estado_inicial').value.trim();
+    estados_finales = document.getElementById('estados_finales').value.trim().split(',');
+
+    const afdData = {
+        estados: estados,
+        transiciones: transiciones,
+        estado_inicial: estado_inicial,
+        estados_finales: estados_finales
+    };
+
+    crearAFD(afdData); // Llamada a la función para crear el AFD y reflejarlo en el canvas
+});
+
+function agregarBotonesZoom() {
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+
+    zoomInBtn.addEventListener('click', () => {
+        let currentZoom = cy.zoom();
+        cy.zoom({
+            level: currentZoom + 0.1,  // Ajusta el nivel de zoom
+            renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 }  // Centra el zoom
+        });
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+        let currentZoom = cy.zoom();
+        cy.zoom({
+            level: currentZoom - 0.1,  // Ajusta el nivel de zoom
+            renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 }  // Centra el zoom
+        });
     });
 }
 
@@ -184,27 +256,16 @@ function dibujarAFD(afdData) {
     });
 
     // Aplicar el layout
-    cy.layout({ name: 'grid' }).run();
+    cy.layout({ name: 'preset' }).run();
 }
 
 async function crearAFD() {
-    const estados = document.getElementById('estados').value.split(',');
-    const alfabeto = document.getElementById('alfabeto').value.split(',');
-    const transicionesText = document.getElementById('transiciones').value.trim().split('\n');
-    const transiciones = {};
-
-    transicionesText.forEach(linea => {
-        const [origen, simbolo_destino] = linea.split('->');
-        const [origenEstado, simbolo] = origen.split(',');
-        transiciones[`${origenEstado.trim()},${simbolo.trim()}`] = simbolo_destino.trim();
-    });
-
     const estado_inicial = document.getElementById('estado_inicial').value;
     const estados_finales = document.getElementById('estados_finales').value.split(',');
 
     const afdData = {
         estados: estados,
-        alfabeto: alfabeto,
+        alfabeto: [...new Set(Object.keys(transiciones).map(k => k.split(',')[1]))], // Obtener el alfabeto desde las transiciones
         transiciones: transiciones,
         estado_inicial: estado_inicial,
         estados_finales: estados_finales
@@ -221,8 +282,6 @@ async function crearAFD() {
     const data = await response.json();
     alert(data.message);
     dibujarAFD(afdData);
-    
-    // Mostrar la gramática después de crear el AFD
     mostrarAFD();
 }
 
@@ -287,6 +346,45 @@ async function mostrarAFD() {
     }
 }
 
+function agregarEstado() {
+    const estado = document.getElementById('estado').value.trim();
+    if (estado && !estados.includes(estado)) {
+        estados.push(estado);
+        mostrarEstados();
+    }
+    document.getElementById('estado').value = ''; // Limpiar campo
+}
+
+function mostrarEstados() {
+    const listaEstados = document.getElementById('lista-estados');
+    listaEstados.innerHTML = estados.join(', ');
+}
+
+function agregarTransicion() {
+    const origen = document.getElementById('estado_origen').value.trim();
+    const simbolo = document.getElementById('simbolo').value.trim();
+    const destino = document.getElementById('estado_destino').value.trim();
+    
+    if (origen && simbolo && destino) {
+        const transicionKey = `${origen},${simbolo}`;
+        transiciones[transicionKey] = destino;
+        mostrarTransiciones();
+    }
+    // Limpiar campos
+    document.getElementById('estado_origen').value = '';
+    document.getElementById('simbolo').value = '';
+    document.getElementById('estado_destino').value = '';
+}
+
+function mostrarTransiciones() {
+    const listaTransiciones = document.getElementById('lista-transiciones');
+    listaTransiciones.innerHTML = Object.keys(transiciones)
+        .map(key => `${key} -> ${transiciones[key]}`)
+        .join('<br>');
+}
 
 // Inicializar el gráfico al cargar la página
-document.addEventListener('DOMContentLoaded', inicializarCytoscape);
+document.addEventListener('DOMContentLoaded', () => {
+    inicializarCytoscape();
+    agregarBotonesZoom();
+});
