@@ -151,6 +151,12 @@ function agregarBotonesZoom() {
 }
 
 function dibujarAFD(afdData) {
+    // Guardar las posiciones actuales de los nodos existentes
+    const posicionesExistentes = {};
+    cy.nodes().forEach(node => {
+        posicionesExistentes[node.id()] = node.position();
+    });
+
     // Limpiar la gráfica previa
     cy.elements().remove();
 
@@ -160,50 +166,52 @@ function dibujarAFD(afdData) {
 
     // Agregar nodos
     estados.forEach(estado => {
-        if (afdData.estados_finales.includes(estado)) {
-            // Posición inicial aleatoria
-            const posX = Math.random() * 400;
-            const posY = Math.random() * 400;
+        let posX, posY;
+        
+        // Verificar si ya existe una posición guardada para este nodo
+        if (posicionesExistentes[estado]) {
+            posX = posicionesExistentes[estado].x;
+            posY = posicionesExistentes[estado].y;
+        } else {
+            // Si no hay una posición previa, asignar una posición aleatoria
+            posX = Math.random() * 400;
+            posY = Math.random() * 400;
+        }
 
-            // Añadir nodo más grande (estado-final-externo), que recibirá las transiciones
+        if (afdData.estados_finales.includes(estado)) {
+            // Añadir nodo más grande (estado-final-externo)
             cy.add({
                 group: 'nodes',
-                data: { id: estado + '_externo', label: '' },  // Nodo externo sin etiqueta
+                data: { id: estado + '_externo', label: '' },
                 classes: 'estado-final-externo',
-                position: { x: posX, y: posY }  // Posición inicial
+                position: { x: posX, y: posY }
             });
 
             // Añadir nodo más pequeño con la etiqueta
             cy.add({
                 group: 'nodes',
-                data: { id: estado, label: estado },  // Nodo interno con la etiqueta
+                data: { id: estado, label: estado },
                 classes: 'estado-final',
-                position: { x: posX, y: posY }  // Posición inicial
+                position: { x: posX, y: posY }
             });
 
-            // Vincular movimientos entre el nodo pequeño y el grande
+            // Sincronizar movimiento entre el nodo interno y externo
             const estadoInterno = cy.getElementById(estado);
             const estadoExterno = cy.getElementById(estado + '_externo');
-
-            // Evitar la actualización circular
             let isUpdating = false;
 
-            // Sincronizar movimiento del nodo pequeño con el grande
-            estadoInterno.on('position', function(evt) {
+            estadoInterno.on('position', function() {
                 if (!isUpdating) {
                     isUpdating = true;
-                    const pos = estadoInterno.position();
-                    estadoExterno.position(pos);
+                    estadoExterno.position(estadoInterno.position());
                     isUpdating = false;
                 }
             });
 
-            // Sincronizar movimiento del nodo grande con el pequeño
-            estadoExterno.on('position', function(evt) {
+            estadoExterno.on('position', function() {
                 if (!isUpdating) {
                     isUpdating = true;
-                    const pos = estadoExterno.position();
-                    estadoInterno.position(pos);
+                    estadoInterno.position(estadoExterno.position());
                     isUpdating = false;
                 }
             });
@@ -212,7 +220,8 @@ function dibujarAFD(afdData) {
             // Nodo normal
             cy.add({
                 group: 'nodes',
-                data: { id: estado, label: estado }
+                data: { id: estado, label: estado },
+                position: { x: posX, y: posY }
             });
         }
     });
@@ -221,7 +230,7 @@ function dibujarAFD(afdData) {
     cy.add({
         group: 'nodes',
         data: { id: 'ficticio', label: '' },
-        position: { x: 50, y: 50 }  // Posición fija para el nodo ficticio
+        position: { x: 50, y: 50 }
     });
 
     // Flecha que conecta el nodo ficticio con el estado inicial
@@ -229,7 +238,7 @@ function dibujarAFD(afdData) {
         group: 'edges',
         data: {
             source: 'ficticio',
-            target: estadoInicial + (afdData.estados_finales.includes(estadoInicial) ? '_externo' : ''),  // Apunta al nodo externo si es estado final
+            target: estadoInicial + (afdData.estados_finales.includes(estadoInicial) ? '_externo' : ''),
             label: '',
         },
         classes: 'flecha-inicial'
@@ -239,25 +248,23 @@ function dibujarAFD(afdData) {
     Object.keys(transiciones).forEach(trans => {
         const [origen, simbolo] = trans.split(',');
         const destino = transiciones[trans];
-
-        // Comprobamos si el origen y el destino son estados finales
         const origenExterno = afdData.estados_finales.includes(origen.trim()) ? origen.trim() + '_externo' : origen.trim();
         const destinoExterno = afdData.estados_finales.includes(destino.trim()) ? destino.trim() + '_externo' : destino.trim();
 
-        // Crear la transición
         cy.add({
             group: 'edges',
             data: {
-                source: origenExterno,  // Transición desde el nodo externo (si es final) o el nodo normal
-                target: destinoExterno,  // Transición hacia el nodo externo (si es final) o el nodo normal
+                source: origenExterno,
+                target: destinoExterno,
                 label: simbolo.trim(),
             }
         });
     });
 
-    // Aplicar el layout
+    // Aplicar el layout 'preset' que usa las posiciones actuales
     cy.layout({ name: 'preset' }).run();
 }
+
 
 async function crearAFD() {
     const estado_inicial = document.getElementById('estado_inicial').value;
