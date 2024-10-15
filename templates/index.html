@@ -34,9 +34,9 @@
                             <input type="text" class="form-control" id="estado" placeholder="q0">
                         </div>
                         <div class="mb-3">
-                            <button type="button" class="btn btn-primary w-100" id="agregarEstadoBtn">Agregar Estado</button>
+                            <button type="button" class="btn btn-primary w-100" id="agregarEstadoBtn">Agregar
+                                Estado</button>
                         </div>
-                    
                         <!-- Sección de Transiciones (con 3 campos de texto en la misma fila) -->
                         <div class="row mb-3">
                             <div class="col">
@@ -53,28 +53,38 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <button type="button" class="btn btn-primary w-100" id="agregarTransicionBtn">Agregar Transición</button>
+                            <button type="button" class="btn btn-primary w-100" id="agregarTransicionBtn">Agregar
+                                Transición</button>
                         </div>
-                    
-                        <!-- Estado inicial -->
+                        <div class="row mb-2">
+                            <div class="col">
+                                <label for="estado_inicial" class="form-label">Estado inicial:</label>
+                                <label for=""></label>
+                                <input type="text" class="form-control" id="estado_inicial" placeholder="q0">
+                            </div>
+                            <div class="col">
+                                <label for="estados_finales" class="form-label">Estados finales: </label>
+                                <input type="text" class="form-control" id="estados_finales" placeholder="q2,q3">
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-success w-100" id="crearAfdBtn">Crear AFD</button>
+                        </div>
+                        <!-- Sección para eliminar un estado -->
                         <div class="mb-3">
-                            <label for="estado_inicial" class="form-label">Estado inicial:</label>
-                            <input type="text" class="form-control" id="estado_inicial" placeholder="q0">
+                            <label for="estadoEliminar" class="form-label">Estado a eliminar:</label>
+                            <input type="text" class="form-control" id="estadoEliminar" placeholder="q0">
                         </div>
-                    
-                        <!-- Estados finales -->
                         <div class="mb-3">
-                            <label for="estados_finales" class="form-label">Estados finales (separados por comas):</label>
-                            <input type="text" class="form-control" id="estados_finales" placeholder="q2">
+                            <button type="button" class="btn btn-danger w-100" id="eliminarEstadoBtn">Eliminar
+                                Estado</button>
                         </div>
-                    
-                        <!-- Botón para crear el AFD -->
-                        <button type="button" class="btn btn-success w-100" id="crearAfdBtn">Crear AFD</button>
-                    </form>
-                                                            
-                </div>
-            </div>            
 
+
+                    </form>
+
+                </div>
+            </div>
             <!-- Columna derecha: Visualización del autómata -->
             <div class="col-md-6 d-flex justify-content-center align-items-center">
                 <div class="card p-4 shadow-sm w-100">
@@ -92,7 +102,7 @@
     <!-- Pie de página: Evaluación de cadena centrada -->
     <footer class="bg-light text-center py-4 mt-auto">
         <div class="container">
-            
+
             <div class="row">
                 <!-- Columna izquierda: Formulario para evaluar la cadena -->
                 <div class="col-md-6">

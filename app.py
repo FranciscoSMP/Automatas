@@ -76,5 +76,45 @@ def get_afd():
     else:
         return jsonify({"message": "No hay AFD creado"}), 404
 
+@app.route('/delete_estado', methods=['POST'])
+def delete_estado():
+    global afd
+    data = request.json
+    estado_a_eliminar = data['estado']
+
+    if afd:
+        # Verificar si el estado existe en el AFD
+        if estado_a_eliminar not in afd.estados:
+            return jsonify({"message": "El estado no existe"}), 404
+
+        # Eliminar el estado de la lista de estados
+        afd.estados.remove(estado_a_eliminar)
+
+        # Eliminar cualquier transición relacionada con el estado
+        transiciones_actualizadas = {}
+        for transicion, destino in afd.transiciones.items():
+            origen, simbolo = transicion.split(',')
+            if origen != estado_a_eliminar and destino != estado_a_eliminar:
+                transiciones_actualizadas[transicion] = destino
+
+        afd.transiciones = transiciones_actualizadas
+
+        # Si el estado a eliminar es inicial o final, actualizar esos valores
+        if afd.estado_inicial == estado_a_eliminar:
+            afd.estado_inicial = None  # O asignar un nuevo estado inicial si lo deseas
+
+        if estado_a_eliminar in afd.estados_finales:
+            afd.estados_finales.remove(estado_a_eliminar)
+
+        return jsonify({"message": "Estado eliminado correctamente", "afd": {
+            "Q": afd.estados,
+            "Σ": afd.alfabeto,
+            "δ": afd.transiciones,
+            "q0": afd.estado_inicial,
+            "F": afd.estados_finales
+        }}), 200
+    else:
+        return jsonify({"message": "No hay AFD creado"}), 404
+
 if __name__ == '__main__':
     app.run(debug=True)

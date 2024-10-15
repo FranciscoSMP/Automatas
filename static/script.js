@@ -1,7 +1,8 @@
 let cy;
 let estados = [];
 let transiciones = {};
-let estado_inicial = '';
+let alfabeto = new Set(); 
+let estado_inicial = null;
 let estados_finales = [];
 
 function inicializarCytoscape() {
@@ -80,8 +81,8 @@ function inicializarCytoscape() {
                     'background-color': 'white',
                     'border-color': 'white',
                     'border-width': 0,
-                    'width': 3,
-                    'height': 3
+                    'width': 4,
+                    'height': 4
                 }
             }
         ],
@@ -90,14 +91,49 @@ function inicializarCytoscape() {
     });
 }
 
+document.getElementById('eliminarEstadoBtn').addEventListener('click', function() {
+    const estadoAEliminar = document.getElementById('estadoEliminar').value.trim();
+    if (estadoAEliminar && estados.includes(estadoAEliminar)) {
+        eliminarEstado(estadoAEliminar);
+        document.getElementById('estadoEliminar').value = ''; // Limpiar campo de texto
+    }
+});
+
 document.getElementById('agregarEstadoBtn').addEventListener('click', function() {
     const nuevoEstado = document.getElementById('estado').value.trim();
     if (nuevoEstado && !estados.includes(nuevoEstado)) {
         estados.push(nuevoEstado);
         document.getElementById('estado').value = ''; // Limpiar campo de texto
-        dibujarAFD({ estados, transiciones, estado_inicial, estados_finales }); // Actualizar el canvas
+        cy.add({
+            group: 'nodes',
+            data: { id: nuevoEstado, label: nuevoEstado },
+            position: { x: Math.random() * 130, y: Math.random() * 130}
+        });
     }
+
 });
+
+function eliminarEstado(estado) {
+    // Eliminar el estado de la lista de estados
+    estados = estados.filter(est => est !== estado);
+
+    // Eliminar transiciones asociadas a ese estado
+    for (let key in transiciones) {
+        const [origen, simbolo] = key.split(',');
+        if (origen === estado || transiciones[key] === estado) {
+            delete transiciones[key];
+        }
+    }
+
+    // Eliminar el nodo en Cytoscape
+    cy.getElementById(estado).remove();
+    if (cy.getElementById(estado + '_externo').length > 0) {
+        cy.getElementById(estado + '_externo').remove(); // Remover nodo externo si es estado final
+    }
+
+    mostrarEstados();
+    mostrarTransiciones();
+}
 
 document.getElementById('agregarTransicionBtn').addEventListener('click', function() {
     const estadoOrigen = document.getElementById('transicionOrigen').value.trim();
@@ -105,13 +141,38 @@ document.getElementById('agregarTransicionBtn').addEventListener('click', functi
     const estadoDestino = document.getElementById('transicionDestino').value.trim();
 
     if (estadoOrigen && simbolo && estadoDestino) {
-        transiciones[`${estadoOrigen},${simbolo}`] = estadoDestino;
+        const transicionKey = `${estadoOrigen},${simbolo}`;
+        transiciones[transicionKey] = estadoDestino;
+
         // Limpiar campos de texto
         document.getElementById('transicionOrigen').value = '';
         document.getElementById('transicionSimbolo').value = '';
         document.getElementById('transicionDestino').value = '';
 
-        dibujarAFD({ estados, transiciones, estado_inicial, estados_finales }); // Actualizar el canvas
+        // Verificar si ya existe una transición entre los mismos estados
+        const existingEdge = cy.edges().filter(edge => {
+            return edge.data('source') === estadoOrigen && edge.data('target') === estadoDestino;
+        });
+
+        if (existingEdge.length > 0) {
+            // Si ya existe, actualizar la etiqueta agregando el nuevo símbolo
+            const currentLabel = existingEdge.data('label');
+            const newLabel = currentLabel.split(',').includes(simbolo)
+                ? currentLabel // Si el símbolo ya está, no lo agregamos
+                : currentLabel + ',' + simbolo;
+
+            existingEdge.data('label', newLabel);
+        } else {
+            // Si no existe, agregar una nueva transición
+            cy.add({
+                group: 'edges',
+                data: {
+                    source: estadoOrigen,
+                    target: estadoDestino,
+                    label: simbolo,
+                }
+            });
+        }
     }
 });
 
@@ -151,35 +212,29 @@ function agregarBotonesZoom() {
 }
 
 function dibujarAFD(afdData) {
-    // Guardar las posiciones actuales de los nodos existentes
     const posicionesExistentes = {};
     cy.nodes().forEach(node => {
         posicionesExistentes[node.id()] = node.position();
     });
 
-    // Limpiar la gráfica previa
     cy.elements().remove();
 
     const estados = afdData.estados;
     const transiciones = afdData.transiciones;
     const estadoInicial = afdData.estado_inicial;
 
-    // Agregar nodos
     estados.forEach(estado => {
         let posX, posY;
-        
-        // Verificar si ya existe una posición guardada para este nodo
+
         if (posicionesExistentes[estado]) {
             posX = posicionesExistentes[estado].x;
             posY = posicionesExistentes[estado].y;
         } else {
-            // Si no hay una posición previa, asignar una posición aleatoria
             posX = Math.random() * 400;
             posY = Math.random() * 400;
         }
 
         if (afdData.estados_finales.includes(estado)) {
-            // Añadir nodo más grande (estado-final-externo)
             cy.add({
                 group: 'nodes',
                 data: { id: estado + '_externo', label: '' },
@@ -187,7 +242,6 @@ function dibujarAFD(afdData) {
                 position: { x: posX, y: posY }
             });
 
-            // Añadir nodo más pequeño con la etiqueta
             cy.add({
                 group: 'nodes',
                 data: { id: estado, label: estado },
@@ -195,7 +249,6 @@ function dibujarAFD(afdData) {
                 position: { x: posX, y: posY }
             });
 
-            // Sincronizar movimiento entre el nodo interno y externo
             const estadoInterno = cy.getElementById(estado);
             const estadoExterno = cy.getElementById(estado + '_externo');
             let isUpdating = false;
@@ -215,9 +268,7 @@ function dibujarAFD(afdData) {
                     isUpdating = false;
                 }
             });
-
         } else {
-            // Nodo normal
             cy.add({
                 group: 'nodes',
                 data: { id: estado, label: estado },
@@ -226,14 +277,12 @@ function dibujarAFD(afdData) {
         }
     });
 
-    // Nodo ficticio para la flecha que apunta al estado inicial
     cy.add({
         group: 'nodes',
         data: { id: 'ficticio', label: '' },
         position: { x: 50, y: 50 }
     });
 
-    // Flecha que conecta el nodo ficticio con el estado inicial
     cy.add({
         group: 'edges',
         data: {
@@ -244,10 +293,26 @@ function dibujarAFD(afdData) {
         classes: 'flecha-inicial'
     });
 
-    // Agregar transiciones (edges)
+    // Agrupar las transiciones por origen y destino
+    const transicionesAgrupadas = {};
     Object.keys(transiciones).forEach(trans => {
         const [origen, simbolo] = trans.split(',');
         const destino = transiciones[trans];
+
+        const key = `${origen.trim()}->${destino.trim()}`;
+
+        if (!transicionesAgrupadas[key]) {
+            transicionesAgrupadas[key] = [];
+        }
+
+        transicionesAgrupadas[key].push(simbolo.trim());
+    });
+
+    // Crear las transiciones con los símbolos agrupados
+    Object.keys(transicionesAgrupadas).forEach(key => {
+        const [origen, destino] = key.split('->');
+        const simbolos = transicionesAgrupadas[key].join(',');
+
         const origenExterno = afdData.estados_finales.includes(origen.trim()) ? origen.trim() + '_externo' : origen.trim();
         const destinoExterno = afdData.estados_finales.includes(destino.trim()) ? destino.trim() + '_externo' : destino.trim();
 
@@ -256,15 +321,13 @@ function dibujarAFD(afdData) {
             data: {
                 source: origenExterno,
                 target: destinoExterno,
-                label: simbolo.trim(),
+                label: simbolos,
             }
         });
     });
 
-    // Aplicar el layout 'preset' que usa las posiciones actuales
     cy.layout({ name: 'preset' }).run();
 }
-
 
 async function crearAFD() {
     const estado_inicial = document.getElementById('estado_inicial').value;
