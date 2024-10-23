@@ -1,17 +1,21 @@
+/* Establece la fuente predeterminada para el cuerpo del documento */
 body {
     font-family: Arial, sans-serif;
 }
 
+/* Clase para organizar elementos en una fila y distribuirlos uniformemente */
 .row {
-    display: flex;
-    justify-content: space-between;
+    display: flex; /* Utiliza Flexbox para crear una fila flexible */
+    justify-content: space-between; /* Distribuye los elementos con espacio entre ellos */
 }
 
+/* Clase para definir columnas dentro de la fila */
 .col {
-    flex: 1;
-    padding-right: 10px;
+    flex: 1; /* Hace que cada columna ocupe el mismo espacio flexible */
+    padding-right: 10px; /* Añade un espacio a la derecha de cada columna */
 }
 
+/* Remueve el padding derecho de la última columna para evitar espacio extra */
 .col:last-child {
     padding-right: 0;
 }

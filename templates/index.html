@@ -1,43 +1,50 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
+    <!-- Metadatos para la codificación de caracteres y adaptación a diferentes tamaños de pantalla -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autómata Finito Determinista</title>
-    <!-- Bootstrap CSS -->
+    
+    <!-- Icono de la página web -->
     <link rel="icon" href="/static/favicon.png">
+
+    <!-- Enlace a la hoja de estilos de Bootstrap 5.3.3 para un diseño responsivo -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <!-- Enlace a una hoja de estilos personalizada -->
     <link rel="stylesheet" href="/static/styles.css">
+
+    <!-- Carga la librería Cytoscape para la visualización de grafos (como autómatas) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.1/cytoscape.min.js"></script>
 </head>
-
 <body class="bg-light d-flex flex-column min-vh-100">
-
-    <!-- Título centrado -->
+    <!-- Sección del encabezado de la página -->
     <header class="container text-center mt-3">
         <h1>Autómata Finito Determinista (AFD)</h1>
     </header>
 
-    <!-- Contenido principal: Formulario y Visualización -->
+    <!-- Sección principal que contiene la configuración del AFD y su visualización -->
     <main class="container-fluid mt-4 flex-grow-1">
         <div class="row">
-            <!-- Columna izquierda: Formulario -->
+            <!-- Columna izquierda: Formulario para configurar el AFD -->
             <div class="col-md-6">
                 <div class="card p-4 shadow-sm mb-4">
                     <h3>Configuración del AFD</h3>
                     <form id="afdForm">
-                        <!-- Sección de Estados -->
+                        <!-- Campo para ingresar un estado -->
                         <div class="mb-3">
                             <label for="estado" class="form-label">Estado:</label>
                             <input type="text" class="form-control" id="estado" placeholder="q0">
                         </div>
+                        <!-- Botón para agregar un estado al autómata -->
                         <div class="mb-3">
                             <button type="button" class="btn btn-primary w-100" id="agregarEstadoBtn">Agregar
                                 Estado</button>
                         </div>
-                        <!-- Sección de Transiciones (con 3 campos de texto en la misma fila) -->
+
+                        <!-- Campos para definir una transición (estado de origen, símbolo, estado de destino) -->
                         <div class="row mb-3">
                             <div class="col">
                                 <label for="transicionOrigen" class="form-label">Estado de Origen:</label>
@@ -52,14 +59,17 @@
                                 <input type="text" class="form-control" id="transicionDestino" placeholder="q1">
                             </div>
                         </div>
+
+                        <!-- Botón para agregar una transición -->
                         <div class="mb-3">
                             <button type="button" class="btn btn-primary w-100" id="agregarTransicionBtn">Agregar
                                 Transición</button>
                         </div>
+
+                        <!-- Campos para definir el estado inicial y los estados finales del autómata -->
                         <div class="row mb-2">
                             <div class="col">
                                 <label for="estado_inicial" class="form-label">Estado inicial:</label>
-                                <label for=""></label>
                                 <input type="text" class="form-control" id="estado_inicial" placeholder="q0">
                             </div>
                             <div class="col">
@@ -67,10 +77,13 @@
                                 <input type="text" class="form-control" id="estados_finales" placeholder="q2,q3">
                             </div>
                         </div>
+
+                        <!-- Botón para crear el AFD basado en la configuración ingresada -->
                         <div class="mb-2">
                             <button type="button" class="btn btn-success w-100" id="crearAfdBtn">Crear AFD</button>
                         </div>
-                        <!-- Sección para eliminar un estado -->
+
+                        <!-- Campo y botón para eliminar un estado del autómata -->
                         <div class="mb-3">
                             <label for="estadoEliminar" class="form-label">Estado a eliminar:</label>
                             <input type="text" class="form-control" id="estadoEliminar" placeholder="q0">
@@ -79,17 +92,17 @@
                             <button type="button" class="btn btn-danger w-100" id="eliminarEstadoBtn">Eliminar
                                 Estado</button>
                         </div>
-
-
                     </form>
-
                 </div>
             </div>
-            <!-- Columna derecha: Visualización del autómata -->
+
+            <!-- Columna derecha: Visualización del autómata usando Cytoscape -->
             <div class="col-md-6 d-flex justify-content-center align-items-center">
                 <div class="card p-4 shadow-sm w-100">
                     <h3 class="text-center">Visualización del Autómata</h3>
+                    <!-- Contenedor donde se renderizará el grafo del AFD -->
                     <div id="cy" style="width: 100%; height: 500px; border: 1px solid black;"></div>
+                    <!-- Botones para acercar y alejar la vista del grafo -->
                     <div class="d-flex justify-content-around mt-3">
                         <button id="zoom-in" class="btn btn-secondary">Acercar</button>
                         <button id="zoom-out" class="btn btn-secondary">Alejar</button>
@@ -99,22 +112,22 @@
         </div>
     </main>
 
-    <!-- Pie de página: Evaluación de cadena centrada -->
+    <!-- Sección del pie de página: Formulario para evaluar cadenas y mostrar la gramática del AFD -->
     <footer class="bg-light text-center py-4 mt-auto">
         <div class="container">
-
             <div class="row">
-                <!-- Columna izquierda: Formulario para evaluar la cadena -->
+                <!-- Columna izquierda: Formulario para ingresar una cadena a evaluar -->
                 <div class="col-md-6">
                     <div class="mb-3">
                         <h3>Evaluar Cadena</h3>
                         <label for="cadena" class="form-label">Cadena para evaluar:</label>
                         <input type="text" class="form-control" id="cadena" placeholder="aab">
                     </div>
+                    <!-- Botón para evaluar la cadena ingresada -->
                     <button type="button" class="btn btn-success w-100" onclick="evaluarCadena()">Evaluar</button>
                 </div>
-
-                <!-- Columna derecha: Mostrar gramática del AFD -->
+                
+                <!-- Columna derecha: Contenedor donde se visualizará la gramática del AFD -->
                 <div class="col-md-6" id="afd_gramatica_container">
                     <div id="afd_gramatica"></div>
                 </div>
@@ -122,11 +135,12 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
+    <!-- Carga los scripts de Bootstrap para la interactividad de la página -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+
+    <!-- Enlace a un archivo de script personalizado para manejar la lógica del AFD -->
     <script src="/static/script.js"></script>
 </body>
-
 </html>
